@@ -13,11 +13,11 @@ import (
 
 // S3Sink writes data to AWS S3 using multipart upload
 type S3Sink struct {
-	client   *s3.Client
-	bucket   string
-	key      string
-	ctx      context.Context
-	options  *S3Options
+	client  *s3.Client
+	bucket  string
+	key     string
+	ctx     context.Context
+	options *S3Options
 
 	uploadID       *string
 	buffer         *bytes.Buffer

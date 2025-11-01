@@ -16,7 +16,7 @@ func main() {
 
 	// Create a writer with custom configuration
 	config := kolayxlsxstream.DefaultConfig()
-	config.CompressionLevel = 1 // Fast compression for speed
+	config.CompressionLevel = 1     // Fast compression for speed
 	config.MaxRowsPerSheet = 100000 // Smaller sheets for demonstration
 
 	writer := kolayxlsxstream.NewWriter(sink, config)

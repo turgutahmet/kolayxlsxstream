@@ -215,6 +215,6 @@ go run main.go -dry-run
 
 ## 📚 Further Reading
 
-- [S3 Example README](s3/README.md) - Detailed S3 configuration
-- [Main README](../README.md) - Full API documentation
+- [S3 Example README](examples/s3/README.md) - Detailed S3 configuration
+- [Main README](README.md) - Full API documentation
 - [Go Documentation](https://pkg.go.dev/github.com/turgutahmet/kolayxlsxstream)
