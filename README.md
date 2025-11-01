@@ -3,6 +3,8 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/turgutahmet/kolayxlsxstream.svg)](https://pkg.go.dev/github.com/turgutahmet/kolayxlsxstream)
 [![Go Report Card](https://goreportcard.com/badge/github.com/turgutahmet/kolayxlsxstream)](https://goreportcard.com/report/github.com/turgutahmet/kolayxlsxstream)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/turgutahmet/kolayxlsxstream)](https://github.com/turgutahmet/kolayxlsxstream/releases)
+[![Coverage](https://img.shields.io/badge/coverage-82.4%25-brightgreen)](https://github.com/turgutahmet/kolayxlsxstream)
 
 A high-performance Go library for streaming XLSX files with **constant memory usage** and **direct S3 support**. Export millions of rows without worrying about memory constraints.
 
