@@ -242,6 +242,221 @@ func TestErrorHandling(t *testing.T) {
 	}
 }
 
+func TestInvalidCompressionLevel(t *testing.T) {
+	tmpFile := "test_invalid_compression.xlsx"
+	defer os.Remove(tmpFile)
+
+	sink, err := NewFileSink(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to create sink: %v", err)
+	}
+
+	writer := NewWriter(sink)
+
+	// Test invalid compression levels (valid range: 0-9)
+	tests := []struct {
+		level       int
+		shouldError bool
+	}{
+		{-1, true},  // Below minimum
+		{0, false},  // Valid: no compression
+		{5, false},  // Valid: default
+		{9, false},  // Valid: maximum
+		{10, true},  // Above maximum
+		{100, true}, // Way above maximum
+	}
+
+	for _, tt := range tests {
+		err := writer.SetCompressionLevel(tt.level)
+		if tt.shouldError && err == nil {
+			t.Errorf("Expected error for compression level %d, got nil", tt.level)
+		}
+		if !tt.shouldError && err != nil {
+			t.Errorf("Unexpected error for compression level %d: %v", tt.level, err)
+		}
+	}
+}
+
+func TestSheetNameEdgeCases(t *testing.T) {
+	tmpFile := "test_sheet_names.xlsx"
+	defer os.Remove(tmpFile)
+
+	sink, err := NewFileSink(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to create sink: %v", err)
+	}
+
+	// Test with custom sheet prefix
+	config := DefaultConfig()
+	config.SheetNamePrefix = "CustomSheet"
+	config.MaxRowsPerSheet = 5
+
+	writer := NewWriter(sink, config)
+
+	if err := writer.StartFile([]interface{}{"Data"}); err != nil {
+		t.Fatalf("Failed to start file: %v", err)
+	}
+
+	// Write enough rows to create multiple sheets
+	for i := 0; i < 12; i++ {
+		if err := writer.WriteRow([]interface{}{i}); err != nil {
+			t.Fatalf("Failed to write row %d: %v", i, err)
+		}
+	}
+
+	stats, err := writer.FinishFile()
+	if err != nil {
+		t.Fatalf("Failed to finish file: %v", err)
+	}
+
+	if stats.TotalSheets != 3 {
+		t.Errorf("Expected 3 sheets, got %d", stats.TotalSheets)
+	}
+
+	// Verify file structure
+	zipReader, err := zip.OpenReader(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to open output as ZIP: %v", err)
+	}
+	defer zipReader.Close()
+
+	// Check that all sheet files exist
+	expectedSheets := []string{
+		"xl/worksheets/sheet1.xml",
+		"xl/worksheets/sheet2.xml",
+		"xl/worksheets/sheet3.xml",
+	}
+
+	fileMap := make(map[string]bool)
+	for _, f := range zipReader.File {
+		fileMap[f.Name] = true
+	}
+
+	for _, sheet := range expectedSheets {
+		if !fileMap[sheet] {
+			t.Errorf("Expected sheet file %s not found", sheet)
+		}
+	}
+}
+
+func TestLargeNumberBoundaries(t *testing.T) {
+	tmpFile := "test_large_numbers.xlsx"
+	defer os.Remove(tmpFile)
+
+	sink, err := NewFileSink(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to create sink: %v", err)
+	}
+
+	writer := NewWriter(sink)
+
+	if err := writer.StartFile([]interface{}{"Int", "Float", "String"}); err != nil {
+		t.Fatalf("Failed to start file: %v", err)
+	}
+
+	// Test boundary values
+	tests := [][]interface{}{
+		{int64(9223372036854775807), float64(1.7976931348623157e+308), "Max values"},
+		{int64(-9223372036854775808), float64(-1.7976931348623157e+308), "Min values"},
+		{0, 0.0, "Zero values"},
+		{int64(1), float64(0.0000000001), "Small values"},
+	}
+
+	for _, row := range tests {
+		if err := writer.WriteRow(row); err != nil {
+			t.Fatalf("Failed to write row %v: %v", row, err)
+		}
+	}
+
+	stats, err := writer.FinishFile()
+	if err != nil {
+		t.Fatalf("Failed to finish file: %v", err)
+	}
+
+	if stats.TotalRows != 4 {
+		t.Errorf("Expected 4 rows, got %d", stats.TotalRows)
+	}
+}
+
+func TestMaxRowsPerSheetBoundary(t *testing.T) {
+	tmpFile := "test_max_rows_boundary.xlsx"
+	defer os.Remove(tmpFile)
+
+	sink, err := NewFileSink(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to create sink: %v", err)
+	}
+
+	config := DefaultConfig()
+	config.MaxRowsPerSheet = 3 // Small value to test boundary
+
+	writer := NewWriter(sink, config)
+
+	if err := writer.StartFile([]interface{}{"Value"}); err != nil {
+		t.Fatalf("Failed to start file: %v", err)
+	}
+
+	// Write exactly MaxRowsPerSheet rows
+	for i := 0; i < 3; i++ {
+		if err := writer.WriteRow([]interface{}{i}); err != nil {
+			t.Fatalf("Failed to write row %d: %v", i, err)
+		}
+	}
+
+	// This should trigger new sheet creation
+	if err := writer.WriteRow([]interface{}{3}); err != nil {
+		t.Fatalf("Failed to write row at boundary: %v", err)
+	}
+
+	stats, err := writer.FinishFile()
+	if err != nil {
+		t.Fatalf("Failed to finish file: %v", err)
+	}
+
+	if stats.TotalSheets != 2 {
+		t.Errorf("Expected 2 sheets at boundary, got %d", stats.TotalSheets)
+	}
+
+	if stats.TotalRows != 4 {
+		t.Errorf("Expected 4 total rows, got %d", stats.TotalRows)
+	}
+}
+
+func TestEmptyFile(t *testing.T) {
+	tmpFile := "test_empty.xlsx"
+	defer os.Remove(tmpFile)
+
+	sink, err := NewFileSink(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to create sink: %v", err)
+	}
+
+	writer := NewWriter(sink)
+
+	// Start and finish without writing any rows
+	if err := writer.StartFile([]interface{}{"Header"}); err != nil {
+		t.Fatalf("Failed to start file: %v", err)
+	}
+
+	stats, err := writer.FinishFile()
+	if err != nil {
+		t.Fatalf("Failed to finish file: %v", err)
+	}
+
+	if stats.TotalRows != 0 {
+		t.Errorf("Expected 0 rows in empty file, got %d", stats.TotalRows)
+	}
+
+	if stats.TotalSheets != 1 {
+		t.Errorf("Expected 1 sheet in empty file, got %d", stats.TotalSheets)
+	}
+
+	// Verify file is still valid
+	if _, err := os.Stat(tmpFile); os.IsNotExist(err) {
+		t.Fatal("Empty file should still be created")
+	}
+}
+
 func BenchmarkWriteRows(b *testing.B) {
 	tmpFile := "benchmark_output.xlsx"
 	defer os.Remove(tmpFile)

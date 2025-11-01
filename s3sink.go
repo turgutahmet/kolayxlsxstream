@@ -11,9 +11,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
+// S3ClientAPI defines the interface for S3 operations needed by S3Sink
+type S3ClientAPI interface {
+	CreateMultipartUpload(ctx context.Context, params *s3.CreateMultipartUploadInput, optFns ...func(*s3.Options)) (*s3.CreateMultipartUploadOutput, error)
+	UploadPart(ctx context.Context, params *s3.UploadPartInput, optFns ...func(*s3.Options)) (*s3.UploadPartOutput, error)
+	CompleteMultipartUpload(ctx context.Context, params *s3.CompleteMultipartUploadInput, optFns ...func(*s3.Options)) (*s3.CompleteMultipartUploadOutput, error)
+	AbortMultipartUpload(ctx context.Context, params *s3.AbortMultipartUploadInput, optFns ...func(*s3.Options)) (*s3.AbortMultipartUploadOutput, error)
+}
+
 // S3Sink writes data to AWS S3 using multipart upload
 type S3Sink struct {
-	client  *s3.Client
+	client  S3ClientAPI
 	bucket  string
 	key     string
 	ctx     context.Context
@@ -60,7 +68,7 @@ func DefaultS3Options() *S3Options {
 }
 
 // NewS3Sink creates a new S3 sink that writes to the specified bucket and key
-func NewS3Sink(ctx context.Context, client *s3.Client, bucket, key string, options ...*S3Options) (*S3Sink, error) {
+func NewS3Sink(ctx context.Context, client S3ClientAPI, bucket, key string, options ...*S3Options) (*S3Sink, error) {
 	opts := DefaultS3Options()
 	if len(options) > 0 && options[0] != nil {
 		opts = options[0]
@@ -238,7 +246,7 @@ func (s *S3Sink) Abort() error {
 
 // S3SinkFromReader creates an S3Sink and copies data from a reader
 // This is a convenience function for uploading existing data to S3
-func S3SinkFromReader(ctx context.Context, client *s3.Client, bucket, key string, reader io.Reader, options ...*S3Options) error {
+func S3SinkFromReader(ctx context.Context, client S3ClientAPI, bucket, key string, reader io.Reader, options ...*S3Options) error {
 	sink, err := NewS3Sink(ctx, client, bucket, key, options...)
 	if err != nil {
 		return err

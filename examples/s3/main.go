@@ -77,19 +77,21 @@ func main() {
 	// Create S3 client
 	client := s3.NewFromConfig(cfg)
 
-	// Test S3 access
+	// Test S3 access (optional - some IAM policies don't allow HeadBucket)
 	fmt.Println("🔍 Testing S3 access...")
 	_, err = client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: bucket,
 	})
 	if err != nil {
-		log.Fatalf("❌ Cannot access bucket '%s': %v\n\n"+
-			"Please check:\n"+
-			"  1. Bucket exists and you have permissions\n"+
-			"  2. AWS credentials are correct\n"+
-			"  3. Region is correct (current: %s)\n", *bucket, err, *region)
+		fmt.Printf("⚠️  Cannot verify bucket access (HeadBucket permission may not be granted)\n")
+		fmt.Printf("   Will attempt upload anyway. If upload fails, check:\n")
+		fmt.Printf("   1. Bucket exists: %s\n", *bucket)
+		fmt.Printf("   2. AWS credentials are correct\n")
+		fmt.Printf("   3. Region is correct: %s\n\n", *region)
+	} else {
+		fmt.Println("✅ S3 bucket accessible")
+		fmt.Println()
 	}
-	fmt.Println("✅ S3 bucket accessible\n")
 
 	// Create S3 sink with custom options
 	s3Options := kolayxlsxstream.DefaultS3Options()
