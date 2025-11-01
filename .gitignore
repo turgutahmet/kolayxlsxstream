@@ -1,0 +1,58 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test output files
+*.xlsx
+test_*.xlsx
+output.xlsx
+large_output.xlsx
+benchmark_*.xlsx
+memory_test.xlsx
+dry_run_*.xlsx
+
+# Examples output
+examples/**/*.xlsx
+examples/**/output.xlsx
+examples/**/converted.xlsx
+examples/**/db_export.xlsx
+
+# Benchmark outputs
+benchmark_output.log
+
+# Memory profiling
+*.prof
+cpu.prof
+mem.prof
+
+# Environment files (actual credentials)
+.env
+.env.local
+
+# Temporary files
+tmp/
+temp/
